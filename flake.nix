@@ -1,22 +1,25 @@
 {
-  description = "A very basic flake";
+  description = "Reproduction of a bug";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/release-23.05";
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs }: {
-
-    packages.aarch64-darwin.default =
-      let toml = (nixpkgs.legacyPackages.aarch64-darwin.formats.toml { }).generate "foo.toml" { };
+  outputs = { self, flake-utils, nixpkgs }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+        toml = (pkgs.formats.toml { }).generate "foo.toml" { };
       in
-      nixpkgs.legacyPackages.aarch64-darwin.stdenv.mkDerivation {
-        name = "toml-bug";
-        src = ./.;
-        installPhase = ''
-          cp ${toml} $out/foo.toml
-        '';
-      };
-
-  };
+      {
+        packages.default = pkgs.stdenv.mkDerivation {
+          name = "toml-bug";
+          src = ./.;
+          installPhase = ''
+            cp ${toml} $out/foo.toml
+          '';
+        };
+      }
+    );
 }
